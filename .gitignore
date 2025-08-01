@@ -5,4 +5,11 @@
     /client/client.zip/
     /server/dist/
     /server/server.zip/
-    .env
+    .env"node_modules/" 
+".env" 
+"client/node_modules/" 
+"client/.env" 
+"server/node_modules/" 
+"server/.env" 
+"dist/" 
+"build/" 
