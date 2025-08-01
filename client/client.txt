@@ -1,0 +1,779 @@
+components/
+
+input/input.tsx
+
+import * as React from "react";
+
+import { cn } from "../../lib/utils";
+
+function Input({ className, type, ...props }: React.ComponentProps<"input">) {
+  return (
+    <input
+      type={type}
+      data-slot="input"
+      className={cn(
+        "file:text-foreground placeholder:text-muted-foreground selection:bg-primary selection:text-primary-foreground dark:bg-input/30 border-input flex h-9 w-full min-w-0 rounded-md border bg-transparent px-3 py-1 text-base shadow-xs transition-[color,box-shadow] outline-none file:inline-flex file:h-7 file:border-0 file:bg-transparent file:text-sm file:font-medium disabled:pointer-events-none disabled:cursor-not-allowed disabled:opacity-50 md:text-sm",
+        "focus-visible:border-ring focus-visible:ring-ring/50 focus-visible:ring-[3px]",
+        "aria-invalid:ring-destructive/20 dark:aria-invalid:ring-destructive/40 aria-invalid:border-destructive",
+        className
+      )}
+      {...props}
+    />
+  );
+}
+
+export { Input };
+
+
+modal/ animated-modal.tsx
+
+import * as React from "react";
+
+import { cn } from "../../lib/utils";
+
+function Input({ className, type, ...props }: React.ComponentProps<"input">) {
+  return (
+    <input
+      type={type}
+      data-slot="input"
+      className={cn(
+        "file:text-foreground placeholder:text-muted-foreground selection:bg-primary selection:text-primary-foreground dark:bg-input/30 border-input flex h-9 w-full min-w-0 rounded-md border bg-transparent px-3 py-1 text-base shadow-xs transition-[color,box-shadow] outline-none file:inline-flex file:h-7 file:border-0 file:bg-transparent file:text-sm file:font-medium disabled:pointer-events-none disabled:cursor-not-allowed disabled:opacity-50 md:text-sm",
+        "focus-visible:border-ring focus-visible:ring-ring/50 focus-visible:ring-[3px]",
+        "aria-invalid:ring-destructive/20 dark:aria-invalid:ring-destructive/40 aria-invalid:border-destructive",
+        className
+      )}
+      {...props}
+    />
+  );
+}
+
+export { Input };
+
+user/
+
+DeleteUserModal.tsx
+import React from "react";
+import {
+  Modal,
+  ModalBody,
+  ModalContent,
+  ModalTrigger,
+} from "../modal/animated-modal";
+
+interface Props {
+  userId: string;
+  deleteUser: (id: string) => void;
+}
+
+const DeleteUserModal: React.FC<Props> = ({ userId, deleteUser }) => {
+  return (
+    <Modal>
+      <button type="button">
+        <ModalTrigger className="bg-red-500 text-black font-bold px-2 py-1 rounded text-[20px]">
+          Delete
+        </ModalTrigger>
+      </button>
+      <ModalBody>
+        <ModalContent className="flex flex-col items-center gap-[80px]">
+          <big className="text-[25px]">Do you want to delete this record?</big>
+          <div className="flex gap-4 text-[22px]">
+            <button
+              type="button"
+              className="rounded-full bg-red-500 py-2 px-7"
+              onClick={() => deleteUser(userId)}
+            >
+              Yes
+            </button>
+            <button
+              type="button"
+              className="rounded-full bg-green-500 py-2 px-7"
+              onClick={() => document.body.click()} // closes modal
+            >
+              No
+            </button>
+          </div>
+        </ModalContent>
+      </ModalBody>
+    </Modal>
+  );
+};
+
+export default DeleteUserModal;
+
+LoginForm.tsx
+import { useForm } from "react-hook-form";
+import { useLoginMutation } from "../../features/users/userApiSlice";
+import { LoginFormValues, loginSchema } from "../../forms/loginSchema";
+import { zodResolver } from "@hookform/resolvers/zod";
+import { useNavigate } from "react-router-dom";
+
+const LoginForm = () => {
+  const [login, { isLoading, error }] = useLoginMutation();
+  const navigate = useNavigate();
+
+  const {
+    register,
+    handleSubmit,
+    formState: { errors },
+  } = useForm<LoginFormValues>({
+    resolver: zodResolver(loginSchema),
+  });
+
+  const onSubmit = async (data: LoginFormValues) => {
+    try {
+      // call Login RTKQ mutations
+      const response = await login(data).unwrap();
+      console.log("🟡 Login Form Data:", data);
+
+      //save token to localStorage
+      localStorage.setItem("token", response.token);
+      localStorage.setItem("role", response.role); // ✅ Save role
+      localStorage.setItem("userId", response._id); // Optional: helpful for self-updates
+
+      console.log("token");
+
+      navigate("/users");
+      // when login success - show message or redirect
+      console.log("Login success");
+    } catch (err: any) {
+      console.error("Login failed:", err);
+    }
+  };
+
+  return (
+    <div>
+      <form onSubmit={handleSubmit(onSubmit)}>
+        {/* Email Field */}
+        <input
+          type="email"
+          {...register("email")}
+          placeholder="Email"
+          className="text-black"
+        />
+        <p>{errors.email?.message}</p>
+
+        {/* Password Field */}
+        <input
+          type="password"
+          {...register("password")}
+          placeholder="Password"
+          className="text-black"
+        />
+        <p>{errors.password?.message}</p>
+
+        {/* submit */}
+        <button type="submit" disabled={isLoading}>
+          {isLoading ? "Loading" : "Login"}
+        </button>
+
+        {/* Error */}
+        {error && <p>Login Error!</p>}
+      </form>
+    </div>
+  );
+};
+
+export default LoginForm;
+
+UpdateUserModal.tsx
+import React, { useState } from "react";
+import {
+  Modal,
+  ModalBody,
+  ModalContent,
+  ModalFooter,
+  ModalTrigger,
+} from "../modal/animated-modal";
+import { Input } from "../input/input";
+
+interface Props {
+  user: any;
+  isAdmin: boolean;
+  updateUser: any;
+  setCurrentUser: (user: any) => void;
+}
+
+const UpdateUserModal: React.FC<Props> = ({
+  user,
+  isAdmin,
+  updateUser,
+  setCurrentUser,
+}) => {
+  const [editUserName, setEditUserName] = useState(user.username);
+  const [editEmail, setEditEmail] = useState(user.email);
+  const [editRole, setEditRole] = useState(user.role);
+  const [currentPassword, setCurrentPassword] = useState("");
+  const [newPassword, setNewPassword] = useState("");
+  const [confirmNewPassword, setConfirmNewPassword] = useState("");
+
+  const handleSubmit = async () => {
+    if (!currentPassword || !newPassword || !confirmNewPassword) {
+      alert("Please fill all password fields.");
+      return;
+    }
+    if (newPassword !== confirmNewPassword) {
+      alert("New password do not match!");
+      return;
+    }
+    try {
+      await updateUser({
+        id: user._id,
+        username: editUserName,
+        email: editEmail,
+        role: editRole,
+        currentPassword,
+        newPassword,
+        confirmNewPassword,
+      }).unwrap();
+      alert("User updated successfully!");
+    } catch (error: any) {
+      console.error(error);
+      const message =
+        error?.data?.message ?? "Update failed due to network/server error";
+      alert("Update failed: " + message);
+    }
+  };
+
+  return (
+    <Modal>
+      <button type="button" onClick={() => setCurrentUser(user)}>
+        <ModalTrigger className="bg-yellow-500 text-black font-bold px-2 py-1 rounded text-[20px]">
+          Update
+        </ModalTrigger>
+      </button>
+
+      <ModalBody>
+        <ModalContent>
+          <h2 className="text-2xl font-bold mb-10">Update your user details</h2>
+          <div className="flex flex-col gap-4">
+            <div className="flex flex-row gap-2">
+              <label
+                className="text-sm basis-1/4 flex items-center"
+                htmlFor="username"
+              >
+                Username
+              </label>
+              <Input
+                className="text-sm basis-3/4"
+                value={editUserName}
+                onChange={(e) => setEditUserName(e.target.value)}
+                type="text"
+                placeholder="Enter your username"
+                id="username"
+              />
+            </div>
+
+            {isAdmin && (
+              <div className="flex flex-row gap-2">
+                <label
+                  className="text-sm basis-1/4 flex items-center"
+                  htmlFor="role"
+                >
+                  Role
+                </label>
+                <select
+                  className="text-sm basis-3/4 text-white bg-transparent border rounded-md h-9"
+                  value={editRole}
+                  onChange={(e) => setEditRole(e.target.value)}
+                  id="role"
+                >
+                  <option
+                    disabled
+                    selected
+                    className="bg-black text-white"
+                    value="admin-seller"
+                  >
+                    - Select Role -
+                  </option>
+                  <option className="bg-black text-white" value="admin-seller">
+                    Admin Seller
+                  </option>
+                  <option className="bg-black text-white" value="seller">
+                    Seller
+                  </option>
+                  <option className="bg-black text-white" value="supplier">
+                    Supplier
+                  </option>
+                  <option className="bg-black text-white" value="customer">
+                    Customer
+                  </option>
+                </select>
+              </div>
+            )}
+
+            <div className="flex flex-row gap-2">
+              <label
+                className="text-sm basis-1/4 flex items-center"
+                htmlFor="email"
+              >
+                Email
+              </label>
+              <Input
+                className="text-sm basis-3/4"
+                value={editEmail}
+                onChange={(e) => setEditEmail(e.target.value)}
+                type="email"
+                id="email"
+              />
+            </div>
+
+            <div className="flex flex-row gap-2">
+              <label
+                className="text-sm basis-1/4 flex items-center"
+                htmlFor="current-password"
+              >
+                Current Password
+              </label>
+              <Input
+                className="text-sm basis-3/4"
+                value={currentPassword}
+                onChange={(e) => setCurrentPassword(e.target.value)}
+                type="password"
+                id="current-password"
+              />
+            </div>
+
+            <div className="flex flex-row gap-2">
+              <label
+                className="text-sm basis-1/4 flex items-center"
+                htmlFor="new-password"
+              >
+                New Password
+              </label>
+              <Input
+                className="text-sm basis-3/4"
+                value={newPassword}
+                onChange={(e) => setNewPassword(e.target.value)}
+                type="password"
+                id="new-password"
+              />
+            </div>
+
+            <div className="flex flex-row gap-2">
+              <label
+                className="text-sm basis-1/4 flex items-center"
+                htmlFor="confirm-password"
+              >
+                Confirm New Password
+              </label>
+              <Input
+                className="text-sm basis-3/4"
+                value={confirmNewPassword}
+                onChange={(e) => setConfirmNewPassword(e.target.value)}
+                type="password"
+                id="confirm-password"
+              />
+            </div>
+          </div>
+        </ModalContent>
+
+        <ModalFooter className="flex justify-center mt-6">
+          <button
+            onClick={handleSubmit}
+            className="bg-[#96DD99] font-bold text-[#16161d] w-[100px] h-[50px] rounded-[50px] text-[20px] flex justify-center items-center"
+          >
+            Save
+          </button>
+        </ModalFooter>
+      </ModalBody>
+    </Modal>
+  );
+};
+
+export default UpdateUserModal;
+
+UserForm.tsx
+
+import { useForm } from "react-hook-form";
+import { useCreateUserMutation } from "../../features/users/userApiSlice";
+import { UserFormValues, userSchema } from "../../forms/userSchema";
+import { zodResolver } from "@hookform/resolvers/zod";
+import { useNavigate } from "react-router-dom";
+
+const UserForm = () => {
+  const [createUser, { isLoading, isSuccess }] = useCreateUserMutation();
+  const navigate = useNavigate();
+
+  const {
+    register,
+    handleSubmit,
+    reset,
+    formState: { errors },
+  } = useForm<UserFormValues>({
+    resolver: zodResolver(userSchema),
+  });
+
+  const onSubmit = async (data: UserFormValues) => {
+    try {
+      await createUser(data).unwrap();
+      alert("✅ User created");
+      reset();
+      navigate("/login");
+    } catch (err) {
+      alert("❌ Failed to register user");
+      console.error("Create user error:", err);
+    }
+  };
+
+  return (
+    <form onSubmit={handleSubmit(onSubmit)}>
+      {/* 🧍 Username Field */}
+      <div>
+        <label htmlFor="username">Name</label>
+        <input
+          {...register("username")}
+          className="text-black"
+          type="text"
+          placeholder="Enter your name"
+        />
+        <p className="text-red-500">{errors.username?.message}</p>
+      </div>
+
+      {/* 🧑‍💼 Role Dropdown */}
+      <div>
+        <label htmlFor="role">Role</label>
+        <select
+          {...register("role")}
+          className="text-black"
+          defaultValue="" // 👈 Force placeholder option
+        >
+          <option value="" disabled>
+            -- Select Role --
+          </option>
+          <option value="admin-seller">Admin Seller</option>
+          <option value="seller">Seller</option>
+          <option value="supplier">Supplier</option>
+          <option value="customer">Customer</option>
+        </select>
+        <p className="text-red-500">{errors.role?.message}</p>
+      </div>
+
+      {/* 📧 Email Field */}
+      <div>
+        <label htmlFor="email">Email</label>
+        <input
+          {...register("email")}
+          className="text-black"
+          type="email"
+          placeholder="example@mail.com"
+        />
+        <p className="text-red-500">{errors.email?.message}</p>
+      </div>
+
+      {/* 🔐 Password Field */}
+      <div>
+        <label htmlFor="password">Password</label>
+        <input
+          {...register("password")}
+          className="text-black"
+          type="password"
+          placeholder="********"
+        />
+        <p className="text-red-500">{errors.password?.message}</p>
+      </div>
+
+      {/* 🚀 Submit Button */}
+      <div>
+        <button type="submit" disabled={isLoading}>
+          {isLoading ? "Connecting..." : "Register"}
+        </button>
+      </div>
+
+      {/* ✅ Success Message */}
+      {isSuccess && <p className="text-green-500">User added successfully</p>}
+    </form>
+  );
+};
+
+export default UserForm;
+
+
+UserList.tsx
+
+// 🧩 Modal Components Split Out
+import React, { useState } from "react";
+import {
+  useDeleteUserMutation,
+  useGetUsersQuery,
+  useUpdateUserMutation,
+} from "../../features/users/userApiSlice";
+import { Modal, useModal } from "../modal/animated-modal";
+import DeleteUserModal from "./DeleteUserModal";
+import UpdateUserModal from "./UpdateUserModal";
+
+const UserList = () => {
+  const { setOpen } = useModal();
+  const { data: users, isLoading, error } = useGetUsersQuery();
+  const [deleteUser] = useDeleteUserMutation();
+  const [updateUser] = useUpdateUserMutation();
+
+  const [currentUser, setCurrentUser] = useState<any>(null);
+  const isAdmin = localStorage.getItem("role") === "admin-seller";
+
+  if (isLoading) return <p>Loading...</p>;
+  if (error) return <p>Error loading users</p>;
+
+  return (
+    <table className="table-auto border-collapse w-full p-20">
+      <thead>
+        <tr>
+          <th className="border px-4 py-2">Name</th>
+          <th className="border px-4 py-2">Role</th>
+          <th className="border px-4 py-2">Email</th>
+          <th className="border px-4 py-2">Action</th>
+        </tr>
+      </thead>
+      <tbody>
+        {users?.map((user: any) => (
+          <tr key={user._id}>
+            <td className="border px-4 py-2">{user.username}</td>
+            <td className="border px-4 py-2">{user.role}</td>
+            <td className="border px-4 py-2">{user.email}</td>
+            <td className="border px-4 py-2 flex gap-2 justify-center">
+              {isAdmin && (
+                <DeleteUserModal userId={user._id} deleteUser={deleteUser} />
+              )}
+
+              <UpdateUserModal
+                user={user}
+                isAdmin={isAdmin}
+                updateUser={updateUser}
+                setCurrentUser={setCurrentUser}
+              />
+            </td>
+          </tr>
+        ))}
+      </tbody>
+    </table>
+  );
+};
+
+export default UserList;
+
+features/
+
+items/
+itemApiSlice.ts
+import { createApi } from "@reduxjs/toolkit/query";
+
+
+export const itemApi = createApi({})
+
+users/
+userApiSlice.ts
+import { createApi } from "@reduxjs/toolkit/query/react";
+import axiosBaseQuery from "../../services/axiosBaseQuery";
+
+//Setup RTKQ Api
+export const userApi = createApi({
+  // key that assign reducer of redux store
+  reducerPath: "userApi",
+
+  //Save axios base query function
+  baseQuery: axiosBaseQuery({
+    baseUrl: "http://localhost:5000/api/users",
+  }),
+
+  // define tag for support caching
+  tagTypes: ["User"],
+
+  // define Api endpoints
+  endpoints: (builder) => ({
+    //Get/Api/users
+    getUsers: builder.query<any, void>({
+      query: () => ({
+        url: "/",
+        method: "GET",
+      }),
+      providesTags: ["User"], //cache control,
+    }),
+
+    //POST/api/users
+    createUser: builder.mutation({
+      query: (newUser) => ({
+        url: "/register",
+        method: "POST",
+        data: newUser,
+      }),
+      invalidatesTags: ["User"],
+    }),
+
+    // PUT / api/users/:id
+    updateUser: builder.mutation({
+      query: ({ id, ...data }) => ({
+        url: `/${id}`,
+        method: "PUT",
+        data,
+      }),
+      invalidatesTags: ["User"],
+    }),
+
+    //DELETE/api/users/:id
+    deleteUser: builder.mutation({
+      query: (id) => ({
+        url: `/${id}`,
+        method: "DELETE",
+      }),
+      invalidatesTags: ["User"],
+    }),
+
+    //POST/api/users/login
+    login: builder.mutation({
+      query: (credentials) => ({
+        url: "/login",
+        method: "POST",
+        data: credentials,
+      }),
+    }),
+  }),
+});
+
+// export auto generated hooks
+export const {
+  useGetUsersQuery,
+  useCreateUserMutation,
+  useUpdateUserMutation,
+  useDeleteUserMutation,
+  useLoginMutation,
+} = userApi;
+
+
+forms/
+
+loginSchema.ts
+import { z } from "zod";
+
+export const loginSchema = z.object({
+  email: z.string().email("A valid email required"),
+  password: z.string().min(1, "password required"),
+});
+
+export type LoginFormValues = z.infer<typeof loginSchema>;
+
+userSchema.ts
+import z from "zod";
+
+export const userSchema = z.object({
+  username: z.string().min(1, "Insert username"),
+  role: z.enum(["admin-seller", "seller", "supplier", "customer"], {
+    required_error: "Select a role",
+  }),
+  email: z.string().email("Insert email"),
+  password: z.string().min(8, "Password must be at least 8 characters"),
+});
+
+export type UserFormValues = z.infer<typeof userSchema>;
+
+
+lib/
+
+utils.ts
+import { ClassValue, clsx } from "clsx";
+import { twMerge } from "tailwind-merge";
+
+export function cn(...inputs: ClassValue[]) {
+  return twMerge(clsx(inputs));
+}
+
+redux
+itemStore.ts
+import { configureStore } from "@reduxjs/toolkit";
+import { AppDispatch } from "./userStore";
+
+export const itemStore = configureStore({
+  reducer: {
+    [itemApi.reducerPath]: isTemplateTail.reducer,
+  },
+  middleware: (getItemMiddleware) =>
+    getItemMiddleware().concat(itemApi.middleware),
+});
+
+export type ItemState = ReturnType<typeof itemStore.getState>;
+export type ItemDispatch = typeof itemStore.dispatch;
+
+userStore.ts
+import { configureStore } from "@reduxjs/toolkit";
+import { userApi } from "../features/users/userApiSlice";
+import { useReducer } from "react";
+// import { userReducer } from "../features/users/userApiSlice";
+
+//configure redux store
+export const userStore = configureStore({
+  reducer: {
+    // connect RTKQ API in userApiSlice.ts to Redux Store
+    [userApi.reducerPath]: userApi.reducer,
+
+    // Add Local state to redux toolkit if it available
+    // user: userReducer,
+  },
+
+  //Add RTKQ middleware to redux middleware
+  //
+  middleware: (getDefaultMiddelware) =>
+    getDefaultMiddelware().concat(userApi.middleware),
+});
+
+//Export types of redux store
+export type RootState = ReturnType<typeof userStore.getState>;
+export type AppDispatch = typeof userStore.dispatch;
+
+services/
+axiosBaseQuery.ts
+import axios from "axios";
+
+const axiosBaseQuery =
+  ({ baseUrl }: { baseUrl: string }) =>
+  async ({ url, method, data }: any) => {
+    try {
+      const token = localStorage.getItem("token");
+      const headers = token ? { Authorization: `Bearer ${token}` } : {};
+
+      const result = await axios({
+        url: baseUrl + url,
+        method,
+        data,
+        headers,
+      });
+
+      return { data: result.data };
+    } catch (axiosError: any) {
+      return {
+        error: {
+          status: axiosError.response?.status,
+          data: axiosError.response?.data || axiosError.message,
+        },
+      };
+    }
+  };
+
+export default axiosBaseQuery;
+
+
+index.tsx
+
+import React from "react";
+import ReactDOM from "react-dom/client";
+import "./index.css";
+import App from "./App";
+import reportWebVitals from "./reportWebVitals";
+import { Provider } from "react-redux";
+import { userStore } from "./redux/userStore";
+import { ModalProvider } from "./components/modal/animated-modal";
+
+const root = ReactDOM.createRoot(
+  document.getElementById("root") as HTMLElement
+);
+root.render(
+  <React.StrictMode>
+    <ModalProvider>
+      <Provider store={userStore}>
+        <App />
+      </Provider>
+    </ModalProvider>
+  </React.StrictMode>
+);
+
+// If you want to start measuring performance in your app, pass a function
+// to log results (for example: reportWebVitals(console.log))
+// or send to an analytics endpoint. Learn more: https://bit.ly/CRA-vitals
+reportWebVitals();
